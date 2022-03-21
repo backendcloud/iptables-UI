@@ -82,10 +82,11 @@ function ForDeal(tableName, text) {
     return table;
 }
 
-function getTable(name) {
+function getTable(node,name) {
     return new Promise((resolve, reject) => {
         try {
-            exec("/sbin/iptables -t " + name + " -L -n --line-numbers -v", function (err, stdout, stderr) {
+console.log("ssh " + node + " -C /sbin/iptables -t " + name + " -L -n --line-numbers -v");
+            exec("ssh " + node + " -C /sbin/iptables -t " + name + " -L -n --line-numbers -v", function (err, stdout, stderr) {
                 if (!err) {
                     resolve(ForDeal(name, stdout));
                 } else {
@@ -99,9 +100,9 @@ function getTable(name) {
     })
 }
 
-function perform(Command) {
+function perform(node,Command) {
     return new Promise((resolve, reject) => {
-        exec("/sbin/" + Command, function (err, stdout, stderr) {
+        exec("ssh " + node + " -C " + Command, function (err, stdout, stderr) {
             if (!err) {
                 resolve(stdout);
             } else {
@@ -112,10 +113,10 @@ function perform(Command) {
 }
 
 /** 刷新指定表 */
-function refresh(data) {
+function refresh(node,data) {
     var self = this;
     if (data.table) {
-        perform(`iptables -t ${data.table} -L ${data.chain} -n --line-numbers -v`).then(res => {
+        perform(node,`iptables -t ${data.table} -L ${data.chain} -n --line-numbers -v`).then(res => {
             res = ForDeal(data.table, res);
             var rules, type;
             if (builtInJudge(data.chain, 0)) {
@@ -145,10 +146,10 @@ function refresh(data) {
 
 }
 /** 插入命令或者添加 */
-function AddCommand(data) {
+function AddCommand(node,data) {
     var self = this;
     if (data.data.table) {
-        perform(data.data.rules).then(res => {
+        perform(node,data.data.rules).then(res => {
             self.sendJSON({
                 code: 200,
                 type: data.type
@@ -166,10 +167,10 @@ function AddCommand(data) {
 
 }
 /** 删除指定表指定链 */
-function Empty(data){
+function Empty(node,data){
     var self = this;
     if (data.table) {
-        perform(`iptables -t ${data.table} -F ${data.chain} `).then(res => {
+        perform(node,`iptables -t ${data.table} -F ${data.chain} `).then(res => {
             self.sendJSON({
                 code: 200,
                 type: "Empty"
@@ -187,16 +188,80 @@ function Empty(data){
 
 }
 
-function sendList() {
+function SSHLog(node){
+    var self = this;
+    if (node) {
+        perform(node,`tail -n 200 /var/log/secure`).then(res => {
+            self.sendJSON({
+                code: 200,
+                type: "SSHLog",
+                data: res
+            });
+
+        }).catch(err => {
+            self.sendJSON({
+                code: 200,
+                type: "SSHLog",
+                data: err
+            });
+        })
+    }
+
+}
+
+function SystemLog(node){
+    var self = this;
+    if (node) {
+        perform(node,`tail -n 400 /var/log/messages`).then(res => {
+            self.sendJSON({
+                code: 200,
+                type: "SystemLog",
+                data: res
+            });
+
+        }).catch(err => {
+            self.sendJSON({
+                code: 200,
+                type: "SystemLog",
+                data: err
+            });
+        })
+    }
+
+}
+
+function sendList(node) {
     var self = this;
 
-    ['raw', 'mangle', 'nat', 'filter'].forEach((name) => {
-        getTable(name).then(res => {
+//    ['raw', 'mangle', 'nat', 'filter'].forEach((name) => {
+//        getTable("node2",name).then(res => {
+//            self.send(JSON.stringify(Object.assign({ code: 200 }, res)));
+//        }).catch(err => {
+//            console.log("iptables执行失败");
+//        })
+//    })
+console.log("node: " + node);
+getTable(node,'raw').then(res => {
             self.send(JSON.stringify(Object.assign({ code: 200 }, res)));
         }).catch(err => {
             console.log("iptables执行失败");
         })
-    })
+getTable(node,'mangle').then(res => {
+            self.send(JSON.stringify(Object.assign({ code: 200 }, res)));
+        }).catch(err => {
+            console.log("iptables执行失败");
+        })
+getTable(node,'nat').then(res => {
+            self.send(JSON.stringify(Object.assign({ code: 200 }, res)));
+        }).catch(err => {
+            console.log("iptables执行失败");
+        })
+getTable(node,'filter').then(res => {
+            self.send(JSON.stringify(Object.assign({ code: 200 }, res)));
+        }).catch(err => {
+            console.log("iptables执行失败");
+        })
+
 }
 
 module.exports = {
@@ -204,6 +269,8 @@ module.exports = {
     perform,
     refresh,
     AddCommand,
+    SSHLog,
+    SystemLog,
     Empty
 };
 

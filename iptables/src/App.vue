@@ -198,7 +198,10 @@ var ws = null;
 function open() {
     this.wsState = true;
     this.dialogVisible = false;
-    ws.send(JSON.stringify({ type: "list" }));
+    ws.send(JSON.stringify({ node: "10.253.199.82", type: "list" }));
+    //ws.send(JSON.stringify({ node: "10.253.199.82", type: "perform", Command: "cat /var/log/secure" }));
+    ws.send(JSON.stringify({ node: "10.253.199.82", type: "SSHLog" }));
+    ws.send(JSON.stringify({ node: "10.253.199.82", type: "SystemLog" }));
 }
 
 function close() {
@@ -242,6 +245,13 @@ function message(data) {
                         duration: 1000,
                     });
                     break;
+                //case "SSHLog":
+                //    this.$message({
+                //        message: "SSHLog命令成功！",
+                //        type: "success",
+                //        duration: 1000,
+                //    });
+                //    break;
                 case "InsertCommand":
                     this.$message({
                         message: "插入命令成功！",
@@ -349,7 +359,8 @@ export default {
         };
     },
     created() {
-        ws = new WebSocket("ws://192.168.2.164");
+        //ws = new WebSocket("ws://192.168.6.133:82");
+        ws = new WebSocket("ws://10.253.199.109:82");
         if (ws) {
             ws.onopen = open.bind(this);
             ws.onmessage = message.bind(this);
@@ -491,6 +502,7 @@ export default {
         OpenRefresh(event, data) {
             event.target.blur();
             WsSendJSON({
+                node: "10.253.199.82",
                 type: "refresh",
                 data: { table: this.tableName, chain: data.name },
             });
@@ -511,6 +523,7 @@ export default {
                 if (state) {
                     if (this.rules.target != "") {
                         WsSendJSON({
+                            node: "10.253.199.82",
                             type: index ? "AddCommand" : "InsertCommand",
                             data: {
                                 rules: this.rules.append + this.rules.target,
@@ -540,6 +553,7 @@ export default {
                 data.visible = Array(3).fill(false);
                 if (state) {
                     WsSendJSON({
+                        node: "10.253.199.82",
                         type: "Empty",
                         data: {
                             rules: `iptables -t ${this.tableName} -F ${data.name} `,
