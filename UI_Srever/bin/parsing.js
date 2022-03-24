@@ -112,6 +112,25 @@ function perform(node,Command) {
     })
 }
 
+function perform2(node,Command) {
+    var abc = Command
+    console.log(abc);
+    abc = abc.replace(/"/g,"\\\"")
+    abc = abc.replace(/'/g,"\\\'")
+    console.log(abc);
+    return new Promise((resolve, reject) => {
+        //exec("ssh " + node + " -C " + Command, function (err, stdout, stderr) {
+        console.log("ssh " + node + " -C " + abc);
+        exec("ssh " + node + " -C " + abc, function (err, stdout, stderr) {
+            if (!err) {
+                resolve(stdout);
+            } else {
+                reject(stderr);
+            }
+        });
+    })
+}
+
 /** 刷新指定表 */
 function refresh(node,data) {
     var self = this;
@@ -149,7 +168,7 @@ function refresh(node,data) {
 function AddCommand(node,data) {
     var self = this;
     if (data.data.table) {
-        perform(node,data.data.rules).then(res => {
+        perform2(node,data.data.rules).then(res => {
             self.sendJSON({
                 code: 200,
                 type: data.type
@@ -267,6 +286,7 @@ getTable(node,'filter').then(res => {
 module.exports = {
     sendList,
     perform,
+    perform2,
     refresh,
     AddCommand,
     SSHLog,
